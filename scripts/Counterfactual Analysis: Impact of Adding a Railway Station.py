@@ -1,38 +1,48 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np
+from lightgbm import LGBMRegressor
 import os
 
-# === File Paths ===
-wisbech_path = "INPUT YOUR FILE PATH HERE"
-rushden_path = "INPUT YOUR FILE PATH HERE"
-output_path = "INPUT YOUR FILE PATH HERE"
+# === Load Dataset ===
+df = pd.read_csv("INPUT YOUR FILE PATH HERE")
 
-# === Load Data ===
-df_w = pd.read_csv(wisbech_path)
-df_r = pd.read_csv(rushden_path)
+# === Features and Target ===
+feature_cols = [
+    'log_distance_to_station', 'business_count', 'log_interaction',
+    'year_of_transaction', 'railway_Control-NoStation', 'railway_Control-Station',
+    'railway_Post', 'railway_Pre'
+]
+target_col = 'log_real_price'
 
-# === Add Town Labels ===
-df_w["town"] = "WISBECH"
-df_r["town"] = "RUSHDEN"
+# === Train LightGBM model on entire dataset ===
+X = df[feature_cols]
+y = df[target_col]
 
-# === Combine ===
-df_all = pd.concat([df_w, df_r], ignore_index=True)
+model_lgbm = LGBMRegressor(n_estimators=200, learning_rate=0.1, max_depth=6, random_state=42)
+model_lgbm.fit(X, y)
 
-# === Summary Table ===
-summary = df_all.groupby("town")[["real_price", "predicted_price_if_has_station", "price_diff"]].mean().round(2)
-summary["% increase"] = 100 * (summary["predicted_price_if_has_station"] - summary["real_price"]) / summary["real_price"]
-print("\n Average Counterfactual Price Difference:")
-print(summary)
+# === Function to simulate counterfactual ===
+def simulate_counterfactual_lgbm(town_name, save_path):
+    subset = df[df['town/city'].str.upper() == town_name.upper()].copy()
+    if subset.empty:
+        print(f"⚠️ Town '{town_name}' not found.")
+        return
 
-# === Plot Comparison ===
-plt.figure(figsize=(8, 5))
-sns.boxplot(data=df_all, x="town", y="price_diff", palette="Set2")
-plt.title("Predicted Price Difference if Railway Station is Added")
-plt.ylabel("Price Difference (£)")
-plt.xlabel("Town")
-plt.tight_layout()
-plt.savefig(output_path)
-plt.show()
+    # Set counterfactual status
+    subset['railway_Control-NoStation'] = 0
+    subset['railway_Post'] = 1
 
-print(f"\n Chart saved to: {output_path}")
+    # Predict
+    X_counter = subset[feature_cols]
+    log_pred = model_lgbm.predict(X_counter)
+    subset['predicted_price_if_has_station'] = np.expm1(log_pred)
+    subset['real_price'] = np.expm1(subset['log_real_price'])
+    subset['price_diff'] = subset['predicted_price_if_has_station'] - subset['real_price']
+
+    # Save
+    subset[['postcode', 'date_of_transfer', 'real_price', 'predicted_price_if_has_station', 'price_diff']].to_csv(save_path, index=False)
+    print(f"✅ Counterfactual saved: {save_path}")
+
+# === Run for both towns ===
+simulate_counterfactual_lgbm("WISBECH", "INPUT YOUR FILE PATH HERE")
+simulate_counterfactual_lgbm("RUSHDEN", "INPUT YOUR FILE PATH HERE")
