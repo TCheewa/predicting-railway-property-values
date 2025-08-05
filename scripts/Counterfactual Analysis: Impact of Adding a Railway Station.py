@@ -25,7 +25,7 @@ model_lgbm.fit(X, y)
 def simulate_counterfactual_lgbm(town_name, save_path):
     subset = df[df['town/city'].str.upper() == town_name.upper()].copy()
     if subset.empty:
-        print(f"⚠️ Town '{town_name}' not found.")
+        print(f"Town '{town_name}' not found.")
         return
 
     # Set counterfactual status
@@ -41,7 +41,7 @@ def simulate_counterfactual_lgbm(town_name, save_path):
 
     # Save
     subset[['postcode', 'date_of_transfer', 'real_price', 'predicted_price_if_has_station', 'price_diff']].to_csv(save_path, index=False)
-    print(f"✅ Counterfactual saved: {save_path}")
+    print(f"Counterfactual saved: {save_path}")
 
 # === Run for both towns ===
 simulate_counterfactual_lgbm("WISBECH", "INPUT YOUR FILE PATH HERE")
