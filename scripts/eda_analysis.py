@@ -104,7 +104,7 @@ df_filtered = df[df['real_price'] < 2_000_000].copy()
 groups = [g["real_price"].dropna() for _, g in df_filtered.groupby("railway_period")]
 stat, p = kruskal(*groups)
 with open(f"{output_folder}/Kruskal_InflationPrice_Result.txt", "w") as f:
-    f.write(" Kruskal-Wallis Test on Inflation-adjusted Price:\n")
+    f.write("📊 Kruskal-Wallis Test on Inflation-adjusted Price:\n")
     f.write(f"  H-statistic: {stat:.4f}\n")
     f.write(f"  p-value    : {p:.4f}\n")
     f.write("  Result     : " + ("Significant difference\n" if p < 0.05 else "No significant difference\n"))
@@ -123,12 +123,16 @@ g.savefig(f"{output_folder}/Figure_8_FacetHist_InflationPrice_PerPeriod.png")
 plt.close()
 
 # === 11. Correlation Heatmap ===
-columns_for_corr = ['real_price', 'distance_to_station', 'business_count','year_of_transaction']
+columns_for_corr = ['real_price', 'distance_to_station', 'business_count', 'year_of_transaction']
 df_corr = df[columns_for_corr].copy()
 for col in columns_for_corr:
     df_corr[col] = pd.to_numeric(df_corr[col], errors='coerce')
 df_corr.dropna(inplace=True)
 corr_matrix = df_corr.corr(method='pearson').round(2)
+
+# Rename for display only
+corr_matrix.rename(index={'real_price': 'inflation_adjusted_price'},
+                   columns={'real_price': 'inflation_adjusted_price'}, inplace=True)
 
 plt.figure(figsize=(8, 6))
 sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
