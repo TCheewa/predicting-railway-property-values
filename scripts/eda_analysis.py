@@ -21,9 +21,14 @@ df['business_count'] = pd.to_numeric(df['business_count'], errors='coerce')
 df['railway_period'] = df['railway_period'].fillna('Unknown')
 df['year_of_transaction'] = pd.to_datetime(df['date_of_transfer'], errors='coerce').dt.year
 
-# === Log-transform variables already included ===
-
 sns.set(style="whitegrid")
+
+# === Helper functions to exclude 0 ===
+def mean_no_zeros(x):
+    return x[x != 0].mean()
+
+def median_no_zeros(x):
+    return x[x != 0].median()
 
 # === 1. Histogram: Real Price (log-scale X) ===
 plt.figure(figsize=(10, 5))
@@ -56,8 +61,10 @@ plt.close()
 
 # === 4. Scatter: Distance vs Real Price (Log Y) ===
 plt.figure(figsize=(10, 6))
-sns.scatterplot(data=df[(df['real_price'] > 0) & (df['distance_to_station'] >= 0)],
-                x='distance_to_station', y='real_price', hue='railway_period', alpha=0.5)
+sns.scatterplot(
+    data=df[(df['real_price'] > 0) & (df['distance_to_station'] >= 0)],
+    x='distance_to_station', y='real_price', hue='railway_period', alpha=0.5
+)
 plt.yscale('log')
 plt.title("Distance to Station vs Inflation-adjusted Property Price (Log Y)")
 plt.xlabel("Distance to Station (meters)")
@@ -89,9 +96,11 @@ plt.close()
 
 # === 7. Trend: Real Price by Year and Period ===
 plt.figure(figsize=(10, 6))
-sns.lineplot(data=df[df['real_price'] < 2_000_000],
-             x='year_of_transaction', y='real_price',
-             hue='railway_period', estimator='median')
+sns.lineplot(
+    data=df[df['real_price'] < 2_000_000],
+    x='year_of_transaction', y='real_price',
+    hue='railway_period', estimator='median'
+)
 plt.title("Median Inflation-adjusted Property Price by Year and Railway Period")
 plt.xlabel("Year")
 plt.ylabel("Median Inflation-adjusted Price (£)")
@@ -109,8 +118,12 @@ with open(f"{output_folder}/Kruskal_InflationPrice_Result.txt", "w") as f:
     f.write(f"  p-value    : {p:.4f}\n")
     f.write("  Result     : " + ("Significant difference\n" if p < 0.05 else "No significant difference\n"))
 
-# === 9. Descriptive Table ===
-desc = df.groupby('railway_period')[['real_price', 'distance_to_station', 'business_count']].agg(['mean', 'median']).round(2)
+# === 9. Descriptive Table (business_count ไม่รวม 0) ===
+desc = df.groupby('railway_period').agg({
+    'real_price': ['mean', 'median'],
+    'distance_to_station': ['mean', 'median'],
+    'business_count': [mean_no_zeros, median_no_zeros]
+}).round(2)
 desc.to_csv(f"{output_folder}/Descriptive_Table_InflationPrice.csv")
 
 # === 10. Optional: Facet Histogram by Railway Period ===
@@ -130,7 +143,6 @@ for col in columns_for_corr:
 df_corr.dropna(inplace=True)
 corr_matrix = df_corr.corr(method='pearson').round(2)
 
-# Rename for display only
 corr_matrix.rename(index={'real_price': 'inflation_adjusted_price'},
                    columns={'real_price': 'inflation_adjusted_price'}, inplace=True)
 
@@ -141,4 +153,4 @@ plt.tight_layout()
 plt.savefig(f"{output_folder}/Figure_9_Correlation_Heatmap_InflationPrice.png")
 plt.close()
 
-print("All EDA plots and statistics updated to 'Inflation-adjusted Price'.")
+print("All EDA plots and statistics updated: business_count mean & median exclude zeros")
