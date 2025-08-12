@@ -5,7 +5,7 @@ from lightgbm import LGBMRegressor
 import os
 
 # === Load Dataset ===
-df = pd.read_csv("/Users/toptap/Study/Dissertation/data_cleaned/final_model_ready.csv")
+df = pd.read_csv("INPUT YOUR FILE PATH HERE")
 
 # === Features and Target ===
 feature_cols = [
@@ -130,7 +130,7 @@ def plot_multi_town_overview(town_names, save_path=None):
     print(out[['town','mean_uplift']].round(0))
 
 # === Example Usage ===
-output_dir = "/Users/toptap/Study/Dissertation/figs"
+output_dir = "INPUT YOUR FILE PATH HERE"
 os.makedirs(output_dir, exist_ok=True)
 
 # Wisbech
